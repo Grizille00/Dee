@@ -37,6 +37,38 @@ init_session_state()
 
 GEOLOCATION_JS_EXPRESSION = """
 (async () => {
+  const reverseGeocodeInBrowser = async (latitude, longitude) => {
+    try {
+      const endpoint = "https://api.bigdatacloud.net/data/reverse-geocode-client";
+      const params = new URLSearchParams({
+        latitude: String(latitude),
+        longitude: String(longitude),
+        localityLanguage: "en"
+      });
+      const response = await fetch(`${endpoint}?${params.toString()}`, { method: "GET" });
+      if (!response.ok) {
+        return {};
+      }
+      const payload = await response.json();
+      const city =
+        payload.city ||
+        payload.locality ||
+        payload.principalSubdivision ||
+        "";
+      const country = payload.countryName || "";
+      const countryCode = payload.countryCode || "";
+      const parts = [city, country].filter(Boolean);
+      return {
+        city,
+        country,
+        country_code: countryCode,
+        location_label: parts.length ? parts.join(", ") : ""
+      };
+    } catch (err) {
+      return {};
+    }
+  };
+
   if (!navigator.geolocation) {
     return {
       status: "error",
@@ -57,15 +89,24 @@ GEOLOCATION_JS_EXPRESSION = """
 
   return await new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
-      (position) =>
+      async (position) => {
+        const reverseGeo = await reverseGeocodeInBrowser(
+          position.coords.latitude,
+          position.coords.longitude
+        );
         resolve({
           status: "success",
           permission_state: permissionState,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy_m: position.coords.accuracy,
-          timestamp: position.timestamp
-        }),
+          timestamp: position.timestamp,
+          city: reverseGeo.city || "",
+          country: reverseGeo.country || "",
+          country_code: reverseGeo.country_code || "",
+          location_label: reverseGeo.location_label || ""
+        });
+      },
       (error) =>
         resolve({
           status: "error",
@@ -167,20 +208,22 @@ def _ingest_browser_geolocation_payload() -> None:
         st.rerun()
         return
 
-    location_label = "Location detected"
-    city = ""
-    country = ""
-    country_code = ""
-    try:
-        reverse_geo = reverse_geocode_coordinates(latitude=latitude, longitude=longitude)
-        if reverse_geo.get("location_label"):
-            location_label = str(reverse_geo["location_label"])
-        city = str(reverse_geo.get("city", ""))
-        country = str(reverse_geo.get("country", ""))
-        country_code = str(reverse_geo.get("country_code", ""))
-    except Exception:
-        # Keep browser coordinates and continue without city/country enrichment.
-        pass
+    location_label = str(payload.get("location_label", "")).strip() or "Location detected"
+    city = str(payload.get("city", "")).strip()
+    country = str(payload.get("country", "")).strip()
+    country_code = str(payload.get("country_code", "")).strip()
+
+    if not city or not country:
+        try:
+            reverse_geo = reverse_geocode_coordinates(latitude=latitude, longitude=longitude)
+            if reverse_geo.get("location_label"):
+                location_label = str(reverse_geo["location_label"])
+            city = str(reverse_geo.get("city", "")).strip() or city
+            country = str(reverse_geo.get("country", "")).strip() or country
+            country_code = str(reverse_geo.get("country_code", "")).strip() or country_code
+        except Exception:
+            # Keep browser coordinates and continue without city/country enrichment.
+            pass
 
     if city and country:
         location_label = f"{city}, {country}"
