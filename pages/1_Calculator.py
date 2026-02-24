@@ -26,8 +26,6 @@ from dosimetry_app.settings import (
 from dosimetry_app.theme import apply_theme
 from dosimetry_app.ui import init_session_state
 from dosimetry_app.weather import (
-    auto_detect_environment,
-    detect_location_from_ip,
     fetch_current_environment,
     reverse_geocode_coordinates,
 )
@@ -114,25 +112,6 @@ def _extract_component_payload(raw_payload: object) -> dict | None:
     return None
 
 
-def _ensure_auto_environment_snapshot(env_settings: dict) -> None:
-    if str(env_settings["env_source"]) != ENV_SOURCE_AUTO:
-        return
-    if st.session_state.get("live_environment_override"):
-        return
-    if st.session_state.get("auto_environment_warmup_done"):
-        return
-
-    configured_location = str(env_settings["env_dataset_location"]) or None
-    preferred_location = configured_location if configured_location else None
-    try:
-        env_auto = auto_detect_environment(preferred_location=preferred_location)
-        st.session_state["live_environment_override"] = env_auto
-    except Exception:
-        pass
-    finally:
-        st.session_state["auto_environment_warmup_done"] = True
-
-
 def _ingest_browser_geolocation_payload() -> None:
     request_token = int(st.session_state.get("browser_geo_request_token", 1))
     processed_token = int(st.session_state.get("browser_geo_processed_token", 0))
@@ -200,18 +179,8 @@ def _ingest_browser_geolocation_payload() -> None:
         country = str(reverse_geo.get("country", ""))
         country_code = str(reverse_geo.get("country_code", ""))
     except Exception:
-        # Fall back to IP label enrichment when reverse geocoding is unavailable.
+        # Keep browser coordinates and continue without city/country enrichment.
         pass
-
-    if not city and not country:
-        try:
-            ip_location = detect_location_from_ip()
-            city = str(ip_location.get("city", "")).strip()
-            country = str(ip_location.get("country", "")).strip()
-            if not country_code:
-                country_code = str(ip_location.get("country_code", "")).strip()
-        except Exception:
-            pass
 
     if city and country:
         location_label = f"{city}, {country}"
@@ -267,9 +236,7 @@ def _header_environment_snapshot(env_settings: dict) -> tuple[str, float | None,
                 float(live_override.get("temperature_c")) if live_override.get("temperature_c") is not None else None,
                 float(live_override.get("pressure_kpa")) if live_override.get("pressure_kpa") is not None else None,
             )
-        if configured_location:
-            return configured_location, None, None
-        return "Detecting current location...", None, None
+        return "Waiting for browser location...", None, None
 
     if source == ENV_SOURCE_DATASET:
         try:
@@ -341,19 +308,9 @@ def _resolve_environment(env_settings: dict) -> tuple[str, float, float, dict]:
             environment_details["override_used"] = True
             return environmental_source, t_meas_c, p_meas_kpa, environment_details
 
-        preferred_location = configured_location if configured_location else None
-        try:
-            with st.spinner("Fetching live weather data..."):
-                env_auto = auto_detect_environment(preferred_location=preferred_location)
-            t_meas_c = float(env_auto["temperature_c"])
-            p_meas_kpa = float(env_auto["pressure_kpa"])
-        except Exception as exc:
-            raise ValueError(
-                "Live environmental data is unavailable. Please refresh location and try again."
-            ) from exc
-
-        st.session_state["live_environment_override"] = env_auto
-        return environmental_source, t_meas_c, p_meas_kpa, env_auto
+        raise ValueError(
+            "Browser location weather data is unavailable. Allow location permission and press Use My Location."
+        )
 
     raise ValueError("Unsupported environmental source configuration.")
 
@@ -482,7 +439,6 @@ admin_env_source = str(env_settings["env_source"])
 if admin_env_source == ENV_SOURCE_MANUAL:
     admin_env_source = ENV_SOURCE_AUTO
 if admin_env_source == ENV_SOURCE_AUTO:
-    _ensure_auto_environment_snapshot(env_settings)
     _ingest_browser_geolocation_payload()
 
 header_location, header_temp, header_pressure = _header_environment_snapshot(env_settings)

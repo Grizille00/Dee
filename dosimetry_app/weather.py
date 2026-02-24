@@ -8,6 +8,7 @@ IP_GEO_ENDPOINT = "https://ipapi.co/json/"
 OPEN_METEO_ENDPOINT = "https://api.open-meteo.com/v1/forecast"
 OPEN_METEO_GEOCODE_ENDPOINT = "https://geocoding-api.open-meteo.com/v1/search"
 OPEN_METEO_REVERSE_GEOCODE_ENDPOINT = "https://geocoding-api.open-meteo.com/v1/reverse"
+NOMINATIM_REVERSE_ENDPOINT = "https://nominatim.openstreetmap.org/reverse"
 HTTP_TIMEOUT_SECONDS = 10
 AFRICA_COUNTRY_CODES = {
     "DZ",
@@ -131,6 +132,7 @@ def geocode_location(location_query: str) -> dict:
 
 
 def reverse_geocode_coordinates(latitude: float, longitude: float) -> dict:
+    # Primary provider: Open-Meteo reverse geocoding.
     query = urlencode(
         {
             "latitude": latitude,
@@ -140,29 +142,74 @@ def reverse_geocode_coordinates(latitude: float, longitude: float) -> dict:
             "format": "json",
         }
     )
-    payload = _fetch_json(f"{OPEN_METEO_REVERSE_GEOCODE_ENDPOINT}?{query}")
-    results = payload.get("results") or []
-    if not results:
-        raise ValueError("No reverse geocoding results for the provided coordinates.")
+    try:
+        payload = _fetch_json(f"{OPEN_METEO_REVERSE_GEOCODE_ENDPOINT}?{query}")
+        results = payload.get("results") or []
+        if results:
+            african_results = [
+                result for result in results if str(result.get("country_code", "")).upper() in AFRICA_COUNTRY_CODES
+            ]
+            selected = african_results[0] if african_results else results[0]
 
-    african_results = [
-        result for result in results if str(result.get("country_code", "")).upper() in AFRICA_COUNTRY_CODES
-    ]
-    selected = african_results[0] if african_results else results[0]
+            name = selected.get("name")
+            admin1 = selected.get("admin1")
+            country = selected.get("country")
+            country_code = selected.get("country_code")
 
-    name = selected.get("name")
-    admin1 = selected.get("admin1")
-    country = selected.get("country")
-    country_code = selected.get("country_code")
+            parts = [part for part in (name, country) if part]
+            label = ", ".join(parts) if parts else "Current location"
+            return {
+                "location_label": label,
+                "city": str(name) if name else "",
+                "admin1": str(admin1) if admin1 else "",
+                "country": str(country) if country else "",
+                "country_code": str(country_code) if country_code else "",
+            }
+    except Exception:
+        pass
 
-    parts = [part for part in (name, country) if part]
+    # Fallback provider: Nominatim reverse geocoding.
+    fallback_query = urlencode(
+        {
+            "lat": latitude,
+            "lon": longitude,
+            "format": "jsonv2",
+            "addressdetails": 1,
+            "zoom": 10,
+        }
+    )
+    payload = _fetch_json(f"{NOMINATIM_REVERSE_ENDPOINT}?{fallback_query}")
+    address = payload.get("address") or {}
+
+    city = (
+        address.get("city")
+        or address.get("town")
+        or address.get("village")
+        or address.get("municipality")
+        or address.get("county")
+        or ""
+    )
+    admin1 = address.get("state") or address.get("region") or ""
+    country = address.get("country") or ""
+    country_code = str(address.get("country_code") or "").upper()
+
+    if not city and not country:
+        display_name = str(payload.get("display_name") or "").strip()
+        if display_name:
+            parts = [part.strip() for part in display_name.split(",") if part.strip()]
+            if parts and not city:
+                city = parts[0]
+            if len(parts) >= 2 and not country:
+                country = parts[-1]
+
+    parts = [part for part in (city, country) if part]
     label = ", ".join(parts) if parts else "Current location"
     return {
         "location_label": label,
-        "city": str(name) if name else "",
+        "city": str(city) if city else "",
         "admin1": str(admin1) if admin1 else "",
         "country": str(country) if country else "",
-        "country_code": str(country_code) if country_code else "",
+        "country_code": country_code,
     }
 
 

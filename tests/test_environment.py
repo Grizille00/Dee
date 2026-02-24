@@ -118,6 +118,26 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(result["country"], "Zimbabwe")
         self.assertEqual(result["country_code"], "ZW")
 
+    @patch("dosimetry_app.weather._fetch_json")
+    def test_reverse_geocode_coordinates_falls_back_when_primary_empty(self, mock_fetch_json):
+        mock_fetch_json.side_effect = [
+            {"results": []},
+            {
+                "address": {
+                    "city": "Harare",
+                    "state": "Harare Metropolitan",
+                    "country": "Zimbabwe",
+                    "country_code": "zw",
+                },
+                "display_name": "Harare, Zimbabwe",
+            },
+        ]
+        result = reverse_geocode_coordinates(-17.8292, 31.0522)
+        self.assertEqual(result["location_label"], "Harare, Zimbabwe")
+        self.assertEqual(result["city"], "Harare")
+        self.assertEqual(result["country"], "Zimbabwe")
+        self.assertEqual(result["country_code"], "ZW")
+
 
 if __name__ == "__main__":
     unittest.main()
