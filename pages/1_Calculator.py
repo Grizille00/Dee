@@ -492,7 +492,7 @@ header_pressure_label = f"{header_pressure:.1f} kPa" if header_pressure is not N
 
 top_left, top_mid, top_right = st.columns([1.2, 2.6, 1.2])
 with top_left:
-    if st.button("Open Admin Portal", key="open_admin_portal"):
+    if st.button("Open Admin Portal", key="open_admin_portal", use_container_width=True):
         st.switch_page("pages/9_Admin_Portal.py")
 with top_mid:
     st.markdown(
@@ -748,3 +748,5 @@ if submitted:
             _render_detail_cards(result["dataset_versions"], columns=2)
     except Exception as exc:
         st.error(f"Calculation failed: {exc}")
+
+st.markdown("Need help using the calculator? [Open the full user guide](/docs)")
