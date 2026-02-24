@@ -41,3 +41,12 @@ git push -u origin main
 1. Replace demo admin password logic before production deployment.
 2. Add CI for tests/linting.
 3. Add a license file if needed for public distribution.
+
+## 6. Deploy to Streamlit Community Cloud
+
+1. Go to Streamlit Community Cloud and create a new app from this GitHub repo.
+2. Set `app.py` as the entrypoint.
+3. In app Secrets, set:
+   - `admin_username`
+   - `admin_password`
+4. Deploy and verify calculator and admin portal access.

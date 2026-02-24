@@ -11,8 +11,8 @@ streamlit run app.py
 
 ## Default Admin Login
 
-- Username: `admin`
-- Password: `admin123`
+- Username: `admin` (only when no secrets/env override is provided)
+- Password: `admin123` (development default)
 
 Change credentials before production use.
 
@@ -36,3 +36,15 @@ Change credentials before production use.
 - `pages/1_Calculator.py`
 - `pages/9_Admin_Portal.py`
 - `dosimetry_app/`
+
+## Streamlit Community Deployment
+
+1. Push this repository to GitHub.
+2. Create a Streamlit Community Cloud app pointing to `app.py`.
+3. In Streamlit Cloud `Secrets`, set:
+   - `admin_username`
+   - `admin_password`
+4. Deploy.
+
+Optional runtime overrides:
+- `DOSIMETRY_DATA_DIR` can be set to control where DB/uploads are stored.

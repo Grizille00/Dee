@@ -1,6 +1,7 @@
 import json
 import sqlite3
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
 from dosimetry_app.config import DB_PATH
@@ -8,9 +9,17 @@ from dosimetry_app.config import DB_PATH
 
 @contextmanager
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA busy_timeout = 5000;")
+    try:
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
+    except sqlite3.DatabaseError:
+        # Keep defaults when WAL mode is unavailable on the host filesystem.
+        pass
     try:
         yield conn
         conn.commit()

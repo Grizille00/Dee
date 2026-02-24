@@ -13,6 +13,8 @@ from dosimetry_app.database import dump_json, execute, execute_transaction, quer
 from dosimetry_app.validators import validate_dataset
 
 DEFAULT_AFRICA_LOCATION = "Harare, Zimbabwe"
+_DATAFRAME_CACHE_MAX_ENTRIES = 32
+_DATAFRAME_CACHE: dict[str, tuple[int, pd.DataFrame]] = {}
 
 
 def _normalize_location_name(value: str) -> str:
@@ -48,6 +50,23 @@ def _persist_csv(frame: pd.DataFrame, dataset_type: str, version: int) -> tuple[
     frame.to_csv(target, index=False)
     checksum = hashlib.sha256(target.read_bytes()).hexdigest()
     return str(target), checksum
+
+
+def _read_csv_cached(file_path: str) -> pd.DataFrame:
+    path = Path(file_path)
+    resolved_path = str(path.resolve())
+    modified_ns = path.stat().st_mtime_ns
+
+    cached = _DATAFRAME_CACHE.get(resolved_path)
+    if cached and cached[0] == modified_ns:
+        return cached[1].copy()
+
+    frame = pd.read_csv(path)
+    if len(_DATAFRAME_CACHE) >= _DATAFRAME_CACHE_MAX_ENTRIES:
+        oldest_key = next(iter(_DATAFRAME_CACHE))
+        _DATAFRAME_CACHE.pop(oldest_key, None)
+    _DATAFRAME_CACHE[resolved_path] = (modified_ns, frame)
+    return frame.copy()
 
 
 def _register_dataset(
@@ -168,7 +187,7 @@ def get_active_dataset(dataset_type: str) -> tuple[dict | None, pd.DataFrame | N
     )
     if not metadata:
         return None, None
-    frame = pd.read_csv(metadata["file_path"])
+    frame = _read_csv_cached(metadata["file_path"])
     return metadata, frame
 
 
