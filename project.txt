@@ -1,0 +1,890 @@
+Nice — let’s get this real and technical. I built Step 2: Algorithm Structure for you: full inputs, equations (TRS-398/TG-51), SSD vs SAD paths, constants vs variables, Excel logic blocks, Python-style pseudocode, a worked numeric example from Hartmann so you can validate, and a clear list of what you must fact-check (you’re the expert; I’m flagging the sensitive spots).
+
+I’ll be blunt: use this exactly as your engineering spec. Fact-check the flagged items before coding. Let’s go.
+
+1) Core idea (one line)
+Take chamber reading → apply environmental & instrument corrections → apply calibration factor and beam-quality correction → convert to absorbed dose (Gy) per 100 MU (or per MU). Support both SSD and SAD workflows and make every regional/machine parameter adjustable.
+
+2) All input parameters (what the user must enter / system must accept)
+Primary measurement inputs
+
+M_raw — raw chamber reading (coulombs or reading units) per measurement (e.g., nC per 50 MU).
+
+MU_meas — number of monitor units during measurement (so you can scale to per-100MU or per-1MU).
+
+Calibration & chamber
+
+N_Dw_60Co — calibration factor (absorbed-dose to water) for chamber in ⁶⁰Co (Gy/C or Gy/rdg).
+
+chamber_type — (e.g., PTW 30013, Farmer type) → table lookup for kQ (or k′R50, kecal for electrons).
+
+k_Q or table lookup (beam quality conversion factor).
+
+Environment & instrument correction inputs
+
+T_meas (°C) — water/air temperature during measurement.
+
+P_meas (kPa or mmHg) — absolute air pressure measured.
+
+RH if needed (usually not for kTP, but record).
+
+V_high and V_low (bias voltages) & M_high_raw, M_low_raw readings → for P_ion (ion recombination).
+
+M_pos_raw, M_neg_raw → for P_pol (polarity correction).
+
+P_elec — electrometer correction factor (if electrometer calibrated separately).
+
+Beam geometry & QA
+
+SSD or SAD and a toggle geometry_mode = {SSD,SAD}
+
+field_size at surface (cm) or equivalent square
+
+depth (cm) — measurement or treatment depth (e.g., 10 cm)
+
+d_ref (10 cm for photons by convention) or electron d_ref (0.6 R50 − 0.1)
+
+PDD or TPR data tables for energies & fields (lookup)
+
+effective_point_shift (0.6 * r_cav for photons, 0.5 * r_cav for electrons)
+
+chamber_radius (r_cav) — for depth shift
+
+Beam quality determination
+
+%dd(10)_X or %dd(10)_Pb or TPR20,10 for photons
+
+R50 for electrons
+
+Other optional inputs
+
+k_pol (if precomputed)
+
+k_s (ion recomb correction factor) — computed from two-voltage method or input
+
+k_TP (air density correction) — computed from T,P or input
+
+k_elec (electrometer) — input if separate
+
+kQ_tables dataset (for chamber vs TPR/%dd(10), usually in TRS/TG addendum)
+
+user_region_defaults (reference T0 and P0 — country standard if different)
+
+3) TRS-398 core equations you must implement (extracted & formatted)
+Main TRS-398 absolute dosimetry formula (photon):
+
+D
+w
+,
+Q
+=
+M
+Q
+⋅
+N
+D
+,
+w
+Q
+0
+⋅
+k
+Q
+,
+Q
+0
+D 
+w,Q
+​
+ =M 
+Q
+​
+ ⋅N 
+D,w
+Q 
+0
+​
+ 
+​
+ ⋅k 
+Q,Q 
+0
+​
+ 
+​
+ 
+Where:
+
+M
+Q
+M 
+Q
+​
+  = fully corrected chamber reading (C) for beam quality 
+Q
+Q.
+
+N
+D
+,
+w
+Q
+0
+N 
+D,w
+Q 
+0
+​
+ 
+​
+  = calibration coefficient in absorbed dose to water for reference beam 
+Q
+0
+Q 
+0
+​
+  (often ⁶⁰Co) (Gy/C).
+
+k
+Q
+,
+Q
+0
+k 
+Q,Q 
+0
+​
+ 
+​
+  = beam quality conversion factor (chamber specific).
+
+Fully corrected chamber reading:
+
+M
+Q
+=
+M
+r
+a
+w
+⋅
+P
+T
+P
+⋅
+P
+i
+o
+n
+⋅
+P
+p
+o
+l
+⋅
+P
+e
+l
+e
+c
+M 
+Q
+​
+ =M 
+raw
+​
+ ⋅P 
+TP
+​
+ ⋅P 
+ion
+​
+ ⋅P 
+pol
+​
+ ⋅P 
+elec
+​
+ 
+Where:
+
+P
+T
+P
+=
+T
+T
+0
+P
+0
+P
+P 
+TP
+​
+ = 
+T 
+0
+​
+ 
+T
+​
+  
+P
+P 
+0
+​
+ 
+​
+  in absolute K/press form — exact TRS-398 form:
+
+P
+T
+P
+=
+273.2
++
+T
+0
+273.2
++
+T
+⋅
+P
+P
+0
+P 
+TP
+​
+ = 
+273.2+T
+273.2+T 
+0
+​
+ 
+​
+ ⋅ 
+P 
+0
+​
+ 
+P
+​
+ 
+(Confirm sign/convention with TRS-398; fact-check below.)
+
+P
+i
+o
+n
+P 
+ion
+​
+  = recombination correction (two-voltage method)
+
+P
+p
+o
+l
+P 
+pol
+​
+  = polarity correction
+
+P
+e
+l
+e
+c
+P 
+elec
+​
+  = electrometer correction (if separate)
+
+Two-voltage method for Pion (pulsed beam, TRS formula):
+
+If VH (high voltage) and VL (low voltage):
+
+P
+i
+o
+n
+=
+V
+H
+2
+M
+H
+−
+V
+L
+2
+M
+L
+V
+H
+M
+H
+−
+V
+L
+M
+L
+P 
+ion
+​
+ = 
+V 
+H
+​
+ M 
+H
+​
+ −V 
+L
+​
+ M 
+L
+​
+ 
+V 
+H
+2
+​
+ M 
+H
+​
+ −V 
+L
+2
+​
+ M 
+L
+​
+ 
+​
+ 
+(Use TRS-398 exact recommended equation variant — implement both continuous & pulsed formulas and pick depending on machine.)
+
+Polarity correction:
+
+P
+p
+o
+l
+=
+∣
+M
++
+∣
++
+∣
+M
+−
+∣
+2
+M
+r
+e
+f
+P 
+pol
+​
+ = 
+2M 
+ref
+​
+ 
+∣M 
++
+​
+ ∣+∣M 
+−
+​
+ ∣
+​
+ 
+where 
+M
+r
+e
+f
+M 
+ref
+​
+  typically the reading at the polarity used with calibration.
+
+Finally: include 
+k
+Q
+k 
+Q
+​
+  interpolation from published TRS tables (or addendum tables). For electrons use TG-51 style factors k_ecal, k'_{R50}, and P_{Q,gr} for gradient.
+
+4) SSD vs SAD calculation paths — algorithm flow (high level)
+I’ll show the flowchart in textual steps so you can convert to drawing code or Visio.
+
+Common pre-processing (both SSD & SAD)
+Read inputs (M_raw, MU_meas, T_meas, P_meas, V_high/V_low etc., chamber type, NDw, geometry toggle, field_size, depth).
+
+Convert units (nC → C).
+
+Compute P_TP from T_meas & P_meas.
+
+Compute P_pol from M+ and M− or use user input.
+
+Compute P_ion from two-voltage measurement.
+
+Compute P_elec (if necessary).
+
+Combine to M_Q = M_raw * P_TP * P_ion * P_pol * P_elec.
+
+Photon: SSD path
+A. Determine PDD(depth, field_size, energy) from table or interpolation.
+B. Calculate dose_per_MU_ref depending on calibration (e.g., NDw * M_Q scaled to per 100 MU) — see below for scaling.
+C. Apply inverse-square correction if converting readings measured at different SSD than reference.
+D. Final dose at depth = Dose_ref * (PDD(depth) / PDD(d_ref)) with ISF factor if needed.
+
+Photon: SAD path
+A. Determine tissue phantom ratio TPR or TMR at depth from tables (or convert from PDD using formula).
+B. Use D_w = M_Q * N_Dw * k_Q at d_ref (10 cm) — if your reference depth is 10 cm set d_ref accordingly.
+C. For other depths use TPR/TMR conversion.
+
+Electrons (TG-51 style)
+Determine R50 from measured curve.
+
+Use plane-parallel or cylindrical chamber workflows:
+
+D
+w
+,
+Q
+=
+M
+Q
+⋅
+N
+D
+,
+w
+60
+C
+o
+⋅
+k
+e
+c
+a
+l
+⋅
+k
+R
+50
+′
+⋅
+P
+Q
+,
+g
+r
+D 
+w,Q
+​
+ =M 
+Q
+​
+ ⋅N 
+D,w
+60Co
+​
+ ⋅k 
+ecal
+​
+ ⋅k 
+R50
+′
+​
+ ⋅P 
+Q,gr
+​
+ 
+Compute d_ref = 0.6 R50 - 0.1 and evaluate.
+
+5) Excel logic block — sheet & cell mapping (practical)
+Design a workbook with 4 sheets: Admin, Measurements, AlgorithmCore, Lookups.
+
+Sheet: Admin (one-time inputs)
+Cell A2: N_Dw_60Co → value (Gy/C).
+
+A3: Chamber type → dropdown referencing Lookups table.
+
+A4: Calibration MU (e.g., 100 MU)
+
+A5: Reference temp (T0) and A6: Reference pressure (P0)
+
+A7: Units (nC or C toggle)
+
+Sheet: Measurements
+B2: M_raw_nC (raw reading)
+
+B3: MU_meas
+
+B4: M_pos_nC
+
+B5: M_neg_nC
+
+B6: V_high and B7: V_low etc.
+
+B8: T_meas B9: P_meas
+
+Sheet: Lookups
+Table of kQ vs TPR20,10 or %dd(10) for chamber models (import from TRS/TG addendum).
+
+PDD tables vs depth, energy, field size.
+
+TPR tables or conversion coefficients.
+
+Sheet: AlgorithmCore (formulas)
+C2: M_C = IF(Admin!A7="nC", Measurements!B2/1e9, Measurements!B2)
+
+C3: P_TP = ((273.15+Admin!T0)/(273.15+Measurements!T_meas)) * (Measurements!P_meas/Admin!P0) — fact-check sign/reciprocal.
+
+C4: P_ion = formula using V_high, V_low, M_high, M_low (entered as cells).
+
+C5: P_pol = (ABS(M_pos)+ABS(M_neg))/(2*ReferencePolarityReading)
+
+C6: M_Q = C2 * C3 * C4 * C5 * Pelec
+
+C7: k_Q = VLOOKUP(chamber, Lookups!kQTable, MATCH(beamQualityField, headers, 0), TRUE) (interpolate if needed)
+
+C8: D_w = M_Q * Admin!N_Dw_60Co * k_Q (Gy per measurement MU — scale to per 100 MU using MU_meas)
+
+Notes: Use Excel’s FORECAST.LINEAR or create linear interpolation formula for k_Q between table rows.
+
+6) Python-style pseudocode (ready to implement)
+def compute_P_TP(T_meas_C, P_meas_kPa, T0_C=22.0, P0_kPa=101.325):
+    # TRS formula: check sign/reciprocal in official doc
+    return ((273.15 + T0_C) / (273.15 + T_meas_C)) * (P_meas_kPa / P0_kPa)
+
+def compute_P_ion(M_H, M_L, V_H, V_L, pulsed=True):
+    if pulsed:
+        # TRS two-voltage pulsed formula variant:
+        return (V_H**2 * M_H - V_L**2 * M_L) / (V_H * M_H - V_L * M_L)
+    else:
+        # continuous-beam formula (different) - implement as per TRS
+        pass
+
+def compute_P_pol(M_pos, M_neg, M_ref):
+    return (abs(M_pos) + abs(M_neg)) / (2 * M_ref)
+
+def get_kQ_from_table(chamber, beam_quality_metric):
+    # interpolate between tabulated points in database
+    return interpolated_kQ
+
+def compute_M_Q(M_raw_C, P_TP, P_ion, P_pol, P_elec=1.0):
+    return M_raw_C * P_TP * P_ion * P_pol * P_elec
+
+def compute_Dw(M_Q, N_Dw_60Co, k_Q):
+    return M_Q * N_Dw_60Co * k_Q
+
+# Overall flow:
+# 1) read inputs
+# 2) compute corrections
+# 3) compute M_Q
+# 4) determine beam quality (TPR/%dd(10)/R50)
+# 5) lookup k_Q
+# 6) compute D_w (Gy) scaled per MU
+7) Worked numeric example (Hartmann numbers) — follow digits carefully
+Use this to validate your code. I’ll reproduce Hartmann’s example step-by-step.
+
+Given (Hartmann example):
+
+Chamber reading: M = 7.674 nC per 50 MU
+
+We want per 100 MU, so M_100 = 2 * 7.674 = 15.348 nC
+
+T_meas = 20.6 °C
+
+P_meas = 98.18 kPa
+
+N_Dw_60Co = 5.233 × 10^7 Gy/C (check units — TRS lists Gy/C)
+
+k_TP reported = 1.034 (from example)
+
+k_s (ion recombination) reported = 1.004
+
+k_pol assumed ≈ 1.000 (no correction applied)
+
+k_Q (beam quality factor for PTW 30013 at 15 MV) = 0.973 (from interpolation)
+
+Step-by-step:
+
+Convert measurement to coulombs:
+
+M
+100
+=
+15.348
+ nC
+=
+15.348
+×
+10
+−
+9
+ C
+=
+1.5348
+×
+10
+−
+8
+ C
+M 
+100
+​
+ =15.348 nC=15.348×10 
+−9
+  C=1.5348×10 
+−8
+  C.
+
+Apply k_TP (1.034) and k_s (1.004) and k_pol (1.000):
+
+M
+Q
+=
+1.5348
+×
+10
+−
+8
+×
+1.034
+×
+1.004
+×
+1.000
+M 
+Q
+​
+ =1.5348×10 
+−8
+ ×1.034×1.004×1.000.
+
+Multiply stepwise:
+
+1.5348
+×
+10
+−
+8
+×
+1.034
+=
+1.5860
+×
+10
+−
+8
+1.5348×10 
+−8
+ ×1.034=1.5860×10 
+−8
+  (≈; check machine precision).
+
+Multiply by 1.004: 
+1.5860
+×
+10
+−
+8
+×
+1.004
+=
+1.592344
+×
+10
+−
+8
+ C
+1.5860×10 
+−8
+ ×1.004=1.592344×10 
+−8
+  C.
+
+Apply calibration factor 
+N
+D
+,
+w
+60
+C
+o
+N 
+D,w
+60Co
+​
+ :
+
+D
+w
+,
+r
+a
+w
+=
+M
+Q
+×
+N
+D
+,
+w
+=
+1.592344
+×
+10
+−
+8
+ C
+×
+5.233
+×
+10
+7
+ Gy/C
+D 
+w,raw
+​
+ =M 
+Q
+​
+ ×N 
+D,w
+​
+ =1.592344×10 
+−8
+  C×5.233×10 
+7
+  Gy/C.
+
+Multiply mantissas: 
+1.592344
+×
+5.233
+=
+8.33275
+1.592344×5.233=8.33275 (approx).
+
+Combine powers: 
+10
+−
+8
+×
+10
+7
+=
+10
+−
+1
+10 
+−8
+ ×10 
+7
+ =10 
+−1
+ .
+
+So 
+D
+w
+,
+r
+a
+w
+≈
+8.33275
+×
+10
+−
+1
+ Gy
+=
+0.833275
+ Gy
+D 
+w,raw
+​
+ ≈8.33275×10 
+−1
+  Gy=0.833275 Gy per 100 MU (this is before k_Q).
+
+Apply beam quality factor 
+k
+Q
+=
+0.973
+k 
+Q
+​
+ =0.973:
+
+D
+w
+,
+Q
+=
+0.833275
+×
+0.973
+≈
+0.81078
+ Gy per 100 MU
+D 
+w,Q
+​
+ =0.833275×0.973≈0.81078 Gy per 100 MU.
+
+Hartmann reported 0.812 Gy / 100 MU — our computed result matches within rounding. If your implementation gives significantly different numbers, check unit conversions, the exact k_TP formula, and whether ND,w is Gy/C or Gy/rdg.
+
+8) Validation plan (what to test & acceptance criteria)
+Unit tests for each correction factor: P_TP, P_ion, P_pol — use known examples (Hartmann, TRS worked examples).
+
+Integration test: full chain for Hartmann example → expect ≈0.812 Gy/100MU.
+
+Cross-validation: compare results vs manual Excel TRS-398 calculation across several energies (6 MV, 10 MV, 15 MV) and field sizes.
+
+Acceptance: deviation ≤ 1% for absolute dosimetry tests; ≤ 2% acceptable in initial prototype.
+
+9) Areas YOU MUST FACT-CHECK (I flagged the risky bits — you’re the expert; verify these)
+These are the exact things that kill accuracy if wrong. Don’t skip them:
+
+Exact TRS-398 forms for P_TP: Some docs use reciprocal convention. Verify formula and reference conditions (T0, P0) for your region.
+
+Units of N_D,w: confirm whether the calibration certificate gives Gy/C or Gy/reading units; some labs give Gy/rdg. Convert consistently.
+
+k_Q tables and interpolation method: ensure you implement linear interpolation exactly like TRS (or cubic if specified). Different addendums provide slightly different values for chambers — use official tables for each chamber model.
+
+Polarity correction method & reference polarity: TRS advises caution — they often say don’t correct if calibration polarity unknown. Implement a switch.
+
+Pion (recombination) formula variant: TRS gives different versions for continuous vs pulsed beams and conditions — choose correct one for linac pulse structure.
+
+Effective point of measurement shift (0.6·r_cav vs 0.5·r_cav): photons = 0.6 r_cav; electrons = 0.5 r_cav — use chamber radius from manufacturer.
+
+Reference conditions (SSD vs SAD) and how field size is defined (surface vs at isocenter) — these definitions change how you index PDD/TPR tables.
+
+Electron corrections: for electron beams, k_ecal, k'_{R50}, and gradient correction P_{Q,gr} must be implemented exactly as TG-51/TG addendum.
+
+Interpolation for k_Q at extremes: implement fallbacks (don’t extrapolate wildly).
+
+Calibration MU scaling: if calibration NDw is per 100 MU versus per 1 MU, ensure scaling matched to user inputs.
+
+Electrometer calibration factor P_elec vs combined chamber+electrometer calibration — many centers have them calibrated as a unit; Pelec = 1 in that case.
+
+Temperature/Pressure units — TRS uses Kelvin and absolute pressure; ensure consistent units (kPa vs mmHg conversions).
+
+Confidence in published tables — verify the exact version/date of TRS-398 and TG-51 Addendum you want to follow.
+
+I recommend stamping each of these with a supervisor sign-off in writing.

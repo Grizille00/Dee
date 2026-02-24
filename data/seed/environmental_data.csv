@@ -1,0 +1,45 @@
+location,city,country,country_code,latitude,longitude,timezone,temperature_c,pressure_kpa
+"Harare, Zimbabwe",Harare,Zimbabwe,ZW,-17.8292,31.0522,Africa/Harare,22.0,85.9
+"Bulawayo, Zimbabwe",Bulawayo,Zimbabwe,ZW,-20.1325,28.6265,Africa/Harare,24.0,88.6
+"Mutare, Zimbabwe",Mutare,Zimbabwe,ZW,-18.9707,32.6709,Africa/Harare,21.5,89.0
+"Lusaka, Zambia",Lusaka,Zambia,ZM,-15.3875,28.3228,Africa/Lusaka,23.0,88.6
+"Nairobi, Kenya",Nairobi,Kenya,KE,-1.2864,36.8172,Africa/Nairobi,22.0,83.2
+"Mombasa, Kenya",Mombasa,Kenya,KE,-4.0435,39.6682,Africa/Nairobi,29.0,100.8
+"Kampala, Uganda",Kampala,Uganda,UG,0.3476,32.5825,Africa/Kampala,24.0,89.2
+"Kigali, Rwanda",Kigali,Rwanda,RW,-1.9441,30.0619,Africa/Kigali,22.0,83.9
+"Addis Ababa, Ethiopia",Addis Ababa,Ethiopia,ET,8.9806,38.7578,Africa/Addis_Ababa,19.0,78.5
+"Dar es Salaam, Tanzania",Dar es Salaam,Tanzania,TZ,-6.7924,39.2083,Africa/Dar_es_Salaam,29.0,100.9
+"Dodoma, Tanzania",Dodoma,Tanzania,TZ,-6.163,35.7516,Africa/Dar_es_Salaam,27.0,95.5
+"Maputo, Mozambique",Maputo,Mozambique,MZ,-25.9692,32.5732,Africa/Maputo,26.0,100.8
+"Johannesburg, South Africa",Johannesburg,South Africa,ZA,-26.2041,28.0473,Africa/Johannesburg,19.0,84.0
+"Pretoria, South Africa",Pretoria,South Africa,ZA,-25.7479,28.2293,Africa/Johannesburg,23.0,88.7
+"Cape Town, South Africa",Cape Town,South Africa,ZA,-33.9249,18.4241,Africa/Johannesburg,20.0,101.5
+"Gaborone, Botswana",Gaborone,Botswana,BW,-24.6282,25.9231,Africa/Gaborone,24.0,89.0
+"Windhoek, Namibia",Windhoek,Namibia,,-22.5609,17.0658,Africa/Windhoek,23.0,89.0
+"Luanda, Angola",Luanda,Angola,AO,-8.839,13.2894,Africa/Luanda,27.0,100.9
+"Kinshasa, DR Congo",Kinshasa,DR Congo,CD,-4.4419,15.2663,Africa/Kinshasa,28.0,99.8
+"Accra, Ghana",Accra,Ghana,GH,5.6037,-0.187,Africa/Accra,28.0,100.9
+"Lagos, Nigeria",Lagos,Nigeria,NG,6.5244,3.3792,Africa/Lagos,29.0,100.8
+"Abuja, Nigeria",Abuja,Nigeria,NG,9.0765,7.3986,Africa/Lagos,27.0,95.0
+"Dakar, Senegal",Dakar,Senegal,SN,14.7167,-17.4677,Africa/Dakar,27.0,101.0
+"Abidjan, Cote d'Ivoire",Abidjan,Cote d'Ivoire,CI,5.36,-4.0083,Africa/Abidjan,28.0,101.0
+"Cairo, Egypt",Cairo,Egypt,EG,30.0444,31.2357,Africa/Cairo,26.0,100.9
+"Alexandria, Egypt",Alexandria,Egypt,EG,31.2001,29.9187,Africa/Cairo,25.0,101.2
+"Casablanca, Morocco",Casablanca,Morocco,MA,33.5731,-7.5898,Africa/Casablanca,23.0,101.4
+"Rabat, Morocco",Rabat,Morocco,MA,34.0209,-6.8416,Africa/Casablanca,23.0,101.3
+"Algiers, Algeria",Algiers,Algeria,DZ,36.7538,3.0588,Africa/Algiers,25.0,101.4
+"Tunis, Tunisia",Tunis,Tunisia,TN,36.8065,10.1815,Africa/Tunis,25.0,101.3
+"Tripoli, Libya",Tripoli,Libya,LY,32.8872,13.1913,Africa/Tripoli,27.0,101.2
+"Khartoum, Sudan",Khartoum,Sudan,SD,15.5007,32.5599,Africa/Khartoum,33.0,99.3
+"Djibouti, Djibouti",Djibouti,Djibouti,DJ,11.5721,43.1456,Africa/Djibouti,32.0,100.7
+"Mogadishu, Somalia",Mogadishu,Somalia,SO,2.0469,45.3182,Africa/Mogadishu,30.0,100.8
+"Antananarivo, Madagascar",Antananarivo,Madagascar,MG,-18.8792,47.5079,Indian/Antananarivo,20.0,84.2
+"Port Louis, Mauritius",Port Louis,Mauritius,MU,-20.1609,57.5012,Indian/Mauritius,26.0,101.1
+"Libreville, Gabon",Libreville,Gabon,GA,0.4162,9.4673,Africa/Libreville,28.0,100.9
+"Douala, Cameroon",Douala,Cameroon,CM,4.0511,9.7679,Africa/Douala,28.0,100.6
+"Yaounde, Cameroon",Yaounde,Cameroon,CM,3.848,11.5021,Africa/Douala,25.0,92.5
+"Lome, Togo",Lome,Togo,TG,6.1725,1.2314,Africa/Lome,29.0,100.9
+"Cotonou, Benin",Cotonou,Benin,BJ,6.3703,2.3912,Africa/Porto-Novo,29.0,100.8
+"Bamako, Mali",Bamako,Mali,ML,12.6392,-8.0029,Africa/Bamako,34.0,98.0
+"Niamey, Niger",Niamey,Niger,NE,13.5116,2.1254,Africa/Niamey,35.0,98.2
+"Ouagadougou, Burkina Faso",Ouagadougou,Burkina Faso,BF,12.3714,-1.5197,Africa/Ouagadougou,33.0,98.9
