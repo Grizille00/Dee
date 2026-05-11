@@ -36,6 +36,31 @@ def compute_p_tp(
     return numerator / denominator
 
 
+def compute_k_tp_trs398(
+    t_meas_c: float,
+    p_meas_kpa: float,
+    t0_c: float,
+    p0_kpa: float,
+) -> float:
+    if p_meas_kpa <= 0 or p0_kpa <= 0:
+        raise ValueError("Pressure values must be > 0.")
+    numerator = (273.15 + t0_c) * p_meas_kpa
+    denominator = (273.15 + t_meas_c) * p0_kpa
+    return numerator / denominator
+
+
+def compute_k_q_trs398(tpr: float, a: float, b: float) -> float:
+    if b == 0:
+        raise ValueError("TRS-398 k_Q parameter b cannot be zero.")
+    if tpr <= 0:
+        raise ValueError("TPR20,10 must be positive.")
+    numerator = 1.0 - math.exp((a - 0.57) / b)
+    denominator = 1.0 - math.exp((a - tpr) / b)
+    if math.isclose(denominator, 0.0):
+        raise ValueError("TRS-398 k_Q denominator is zero; check a, b, and TPR20,10 values.")
+    return numerator / denominator
+
+
 def compute_p_ion_two_voltage(
     m_high: float,
     m_low: float,
@@ -142,39 +167,64 @@ def calculate_dose(inputs: dict[str, Any]) -> dict[str, Any]:
     reading_unit = str(inputs.get("reading_unit", "nC"))
     m_raw_c = to_coulomb(m_raw, reading_unit)
 
+    protocol_mode = str(inputs.get("protocol_mode", "TG51"))
     t_meas = float(inputs.get("T_meas_C", DEFAULT_T0_C))
     p_meas = float(inputs.get("P_meas_kPa", DEFAULT_P0_KPA))
     t0 = float(inputs.get("T0_C", DEFAULT_T0_C))
     p0 = float(inputs.get("P0_kPa", DEFAULT_P0_KPA))
 
-    p_tp = (
-        float(inputs["P_TP_manual"])
-        if inputs.get("use_manual_p_tp")
-        else compute_p_tp(t_meas, p_meas, t0_c=t0, p0_kpa=p0)
-    )
-
-    p_ion = (
-        float(inputs["P_ion_manual"])
-        if inputs.get("use_manual_p_ion")
-        else compute_p_ion_two_voltage(
-            float(inputs["M_high"]),
-            float(inputs["M_low"]),
-            float(inputs["V_high"]),
-            float(inputs["V_low"]),
+    if protocol_mode == "TRS398":
+        k_tp = (
+            float(inputs["P_TP_manual"])
+            if inputs.get("use_manual_p_tp")
+            else compute_k_tp_trs398(t_meas, p_meas, t0_c=t0, p0_kpa=p0)
         )
-    )
-
-    m_pos = float(inputs.get("M_pos", m_raw))
-    m_neg = float(inputs.get("M_neg", m_raw))
-    m_ref = inputs.get("M_ref")
-    p_pol = (
-        float(inputs["P_pol_manual"])
-        if inputs.get("use_manual_p_pol")
-        else compute_p_pol(m_pos, m_neg, float(m_ref) if m_ref is not None else None)
-    )
-
-    p_elec = float(inputs.get("P_elec", 1.0))
-    m_q = m_raw_c * p_tp * p_ion * p_pol * p_elec
+        k_s = (
+            float(inputs["P_ion_manual"])
+            if inputs.get("use_manual_p_ion")
+            else compute_p_ion_two_voltage(
+                float(inputs["M_high"]),
+                float(inputs["M_low"]),
+                float(inputs["V_high"]),
+                float(inputs["V_low"]),
+            )
+        )
+        m_pos = float(inputs.get("M_pos", m_raw))
+        m_neg = float(inputs.get("M_neg", m_raw))
+        m_ref = inputs.get("M_ref")
+        k_pol = (
+            float(inputs["P_pol_manual"])
+            if inputs.get("use_manual_p_pol")
+            else compute_p_pol(m_pos, m_neg, float(m_ref) if m_ref is not None else None)
+        )
+        p_elec = float(inputs.get("P_elec", 1.0))
+        m_q = m_raw_c * k_tp * k_s * k_pol * p_elec
+    else:
+        p_tp = (
+            float(inputs["P_TP_manual"])
+            if inputs.get("use_manual_p_tp")
+            else compute_p_tp(t_meas, p_meas, t0_c=t0, p0_kpa=p0)
+        )
+        p_ion = (
+            float(inputs["P_ion_manual"])
+            if inputs.get("use_manual_p_ion")
+            else compute_p_ion_two_voltage(
+                float(inputs["M_high"]),
+                float(inputs["M_low"]),
+                float(inputs["V_high"]),
+                float(inputs["V_low"]),
+            )
+        )
+        m_pos = float(inputs.get("M_pos", m_raw))
+        m_neg = float(inputs.get("M_neg", m_raw))
+        m_ref = inputs.get("M_ref")
+        p_pol = (
+            float(inputs["P_pol_manual"])
+            if inputs.get("use_manual_p_pol")
+            else compute_p_pol(m_pos, m_neg, float(m_ref) if m_ref is not None else None)
+        )
+        p_elec = float(inputs.get("P_elec", 1.0))
+        m_q = m_raw_c * p_tp * p_ion * p_pol * p_elec
 
     ndw = (
         float(inputs["N_Dw_60Co"])
@@ -184,19 +234,53 @@ def calculate_dose(inputs: dict[str, Any]) -> dict[str, Any]:
     if ndw <= 0:
         raise ValueError("N_Dw_60Co must be provided or available in chamber defaults.")
 
-    beam_quality = float(inputs.get("beam_quality", 0.0))
-    _, kq_frame = get_active_dataset("kq_table")
-    if kq_frame is None or kq_frame.empty:
-        raise ValueError("Active kq_table dataset is required.")
-
-    k_q = (
-        float(inputs["k_Q_manual"])
-        if inputs.get("use_manual_k_q")
-        else lookup_k_q(chamber_type, beam_quality, kq_frame)
-    )
-
     geometry_mode = str(inputs.get("geometry_mode", "SSD"))
     depth_cm = float(inputs.get("depth_cm", 10.0))
+    d_ref_cm = float(inputs.get("d_ref_cm", 10.0))
+    energy_mv = float(inputs.get("energy_mv", 6.0))
+    field_size_cm = float(inputs.get("field_size_cm", 10.0))
+
+    if protocol_mode == "TRS398":
+        tpr_20_10 = float(inputs.get("TPR_20_10", 0.0))
+
+        use_manual_k_q = bool(inputs.get("use_manual_k_q"))
+        use_advanced_k_q_fitting = bool(inputs.get("use_advanced_k_q_fitting"))
+
+        if use_manual_k_q:
+            k_q = float(inputs["k_Q_manual"])
+        elif use_advanced_k_q_fitting:
+            # Advanced k_Q fitting must use chamber-loaded a/b.
+            # Allow UI overrides by passing explicit kq_a/kq_b in inputs.
+            chamber_a = inputs.get("chamber_a", None)
+            chamber_b = inputs.get("chamber_b", None)
+
+            a_value = inputs.get("kq_a", None)
+            b_value = inputs.get("kq_b", None)
+
+            a = float(a_value) if a_value is not None else float(chamber_a) if chamber_a is not None else None
+            b = float(b_value) if b_value is not None else float(chamber_b) if chamber_b is not None else None
+
+            if a is None or b is None:
+                raise ValueError(
+                    "TRS-398 advanced k_Q fitting requires chamber-loaded parameters 'a' and 'b' "
+                    "(or explicit inputs 'kq_a' and 'kq_b')."
+                )
+
+            k_q = compute_k_q_trs398(tpr_20_10, a, b)
+        else:
+            raise ValueError(
+                "TRS-398 requires either manual k_Q or advanced k_Q fitting parameters."
+            )
+    else:
+        beam_quality = float(inputs.get("beam_quality", 0.0))
+        _, kq_frame = get_active_dataset("kq_table")
+        if kq_frame is None or kq_frame.empty:
+            raise ValueError("Active kq_table dataset is required.")
+        k_q = (
+            float(inputs["k_Q_manual"])
+            if inputs.get("use_manual_k_q")
+            else lookup_k_q(chamber_type, beam_quality, kq_frame)
+        )
     d_ref_cm = float(inputs.get("d_ref_cm", 10.0))
     energy_mv = float(inputs.get("energy_mv", 6.0))
     field_size_cm = float(inputs.get("field_size_cm", 10.0))
@@ -220,9 +304,9 @@ def calculate_dose(inputs: dict[str, Any]) -> dict[str, Any]:
     variables = {
         "M_raw_C": m_raw_c,
         "M_Q": m_q,
-        "P_TP": p_tp,
-        "P_ion": p_ion,
-        "P_pol": p_pol,
+        "P_TP": k_tp if protocol_mode == "TRS398" else p_tp,
+        "P_ion": k_s if protocol_mode == "TRS398" else p_ion,
+        "P_pol": k_pol if protocol_mode == "TRS398" else p_pol,
         "P_elec": p_elec,
         "N_Dw_60Co": ndw,
         "k_Q": k_q,
@@ -238,24 +322,37 @@ def calculate_dose(inputs: dict[str, Any]) -> dict[str, Any]:
 
     dataset_versions = get_active_dataset_versions()
 
+    intermediate_values = {
+        "M_raw_C": m_raw_c,
+        "M_Q": m_q,
+        "P_elec": p_elec,
+        "N_Dw_60Co": ndw,
+        "k_Q": k_q,
+        "depth_factor": depth_factor,
+    }
+    if protocol_mode == "TRS398":
+        # Canonical factor keys used by the guide/audit fields.
+        intermediate_values["k_TP"] = k_tp
+        intermediate_values["k_s"] = k_s
+        intermediate_values["k_pol"] = k_pol
+        intermediate_values["k_Q_computed"] = k_q
+        intermediate_values["k_TP_computed"] = k_tp
+        intermediate_values["k_s_computed"] = k_s
+        intermediate_values["k_pol_computed"] = k_pol
+    else:
+        intermediate_values["P_TP"] = p_tp
+        intermediate_values["P_ion"] = p_ion
+        intermediate_values["P_pol"] = p_pol
+
     return {
         "beam_type": beam_type,
         "geometry_mode": geometry_mode,
+        "protocol_mode": protocol_mode,
         "formula_name": formula["name"],
         "formula_version": int(formula["version"]),
         "formula_expression": formula["expression"],
         "dataset_versions": dataset_versions,
-        "intermediate": {
-            "M_raw_C": m_raw_c,
-            "P_TP": p_tp,
-            "P_ion": p_ion,
-            "P_pol": p_pol,
-            "P_elec": p_elec,
-            "M_Q": m_q,
-            "N_Dw_60Co": ndw,
-            "k_Q": k_q,
-            "depth_factor": depth_factor,
-        },
+        "intermediate": intermediate_values,
         "outputs": {
             "dose_per_measurement_gy": dose_per_measurement,
             "dose_per_100mu_gy": dose_per_100mu,

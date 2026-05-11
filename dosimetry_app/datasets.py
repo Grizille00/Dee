@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timezone
 from difflib import get_close_matches
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -218,18 +219,48 @@ def list_available_chambers() -> list[str]:
 
 
 def get_chamber_defaults(chamber_type: str) -> dict | None:
+    """
+    Returns chamber defaults. For TRS-398 mode, this may include additional
+    Table 45 parameters if they are present in the active dataset:
+      - a, b, r_cav (rcav_cm alias), type, f_ch_60co
+    """
     _, frame = get_active_dataset("chamber_defaults")
     if frame is None or frame.empty:
         return None
+
     matched = frame[frame["chamber_type"].astype(str) == chamber_type]
     if matched.empty:
         return None
+
     row = matched.iloc[0].to_dict()
-    return {
+
+    result: dict[str, Any] = {
         "ndw_60co": float(row["ndw_60co"]),
+        # legacy column name
         "rcav_cm": float(row["rcav_cm"]),
         "reference_polarity": str(row["reference_polarity"]),
     }
+
+    # Optional TRS-398 Table 45 fields (only if the CSV provides them).
+    # Use a conservative naming scheme to avoid breaking existing code/UI.
+    if "a" in row and row["a"] is not None and row["a"] != "":
+        result["a"] = float(row["a"])
+    if "b" in row and row["b"] is not None and row["b"] != "":
+        result["b"] = float(row["b"])
+    if "r_cav" in row and row["r_cav"] is not None and row["r_cav"] != "":
+        result["r_cav"] = float(row["r_cav"])
+    # Alias: if r_cav isn't present, expose rcav_cm as r_cav for TRS-398 naming.
+    result["r_cav"] = result.get("r_cav", result["rcav_cm"])
+
+    if "type" in row and row["type"] is not None and row["type"] != "":
+        result["type"] = str(row["type"])
+    if "f_ch_60co" in row and row["f_ch_60co"] is not None and row["f_ch_60co"] != "":
+        result["f_ch_60co"] = float(row["f_ch_60co"])
+    if "f_ch(60Co)" in row and row["f_ch(60Co)"] is not None and row["f_ch(60Co)"] != "":
+        # Some datasets may use parentheses column names.
+        result["f_ch_60co"] = float(row["f_ch(60Co)"])
+
+    return result
 
 
 def list_environment_locations() -> list[str]:

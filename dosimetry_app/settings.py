@@ -7,11 +7,16 @@ ENV_SOURCE_DATASET = "Dataset"
 ENV_SOURCE_AUTO = "Auto (IP + Weather API)"
 HARARE_LOCATION = "Harare, Zimbabwe"
 
+KTP_SOURCE_AUTO_AUTO = "Automatic KTP (with automatic weather)"
+KTP_SOURCE_AUTO_MANUAL = "Automatic KTP (with manual weather)"
+KTP_SOURCE_MANUAL = "Manual KTP"
+
 DEFAULT_SETTINGS = {
     "env_source": ENV_SOURCE_AUTO,
     "env_manual_temperature_c": "22.0",
     "env_manual_pressure_kpa": "85.9",
     "env_dataset_location": "",
+    "ktp_source": KTP_SOURCE_AUTO_AUTO,
 }
 
 LEGACY_DEFAULT_SETTINGS = {
@@ -19,6 +24,7 @@ LEGACY_DEFAULT_SETTINGS = {
     "env_manual_temperature_c": "20.6",
     "env_manual_pressure_kpa": "98.18",
     "env_dataset_location": "",
+    "ktp_source": KTP_SOURCE_AUTO_AUTO,
 }
 
 LEGACY_HARARE_DEFAULT_SETTINGS = {
@@ -26,6 +32,7 @@ LEGACY_HARARE_DEFAULT_SETTINGS = {
     "env_manual_temperature_c": "22.0",
     "env_manual_pressure_kpa": "85.9",
     "env_dataset_location": HARARE_LOCATION,
+    "ktp_source": KTP_SOURCE_AUTO_AUTO,
 }
 
 
@@ -126,12 +133,14 @@ def get_environment_settings() -> dict[str, str | float]:
         or DEFAULT_SETTINGS["env_manual_pressure_kpa"]
     )
     dataset_location = get_setting("env_dataset_location", DEFAULT_SETTINGS["env_dataset_location"]) or ""
+    ktp_source = get_setting("ktp_source", DEFAULT_SETTINGS["ktp_source"]) or DEFAULT_SETTINGS["ktp_source"]
 
     return {
         "env_source": source,
         "env_manual_temperature_c": manual_t,
         "env_manual_pressure_kpa": manual_p,
         "env_dataset_location": dataset_location,
+        "ktp_source": ktp_source,
     }
 
 
@@ -140,6 +149,7 @@ def save_environment_settings(
     env_manual_temperature_c: float,
     env_manual_pressure_kpa: float,
     env_dataset_location: str,
+    ktp_source: str = KTP_SOURCE_AUTO_AUTO,
 ) -> None:
     commands = [
         (
@@ -181,6 +191,16 @@ def save_environment_settings(
                 updated_at = CURRENT_TIMESTAMP
             """,
             ("env_dataset_location", env_dataset_location),
+        ),
+        (
+            """
+            INSERT INTO app_settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            ("ktp_source", str(ktp_source)),
         ),
     ]
     execute_transaction(commands)

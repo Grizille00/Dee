@@ -50,6 +50,277 @@ body {
   padding-right: 1.1rem;
 }
 
+/* Desktop View (1400px and above) - Full Width Optimization */
+@media (min-width: 1400px) {
+  .main .block-container {
+    max-width: 100%;
+    padding-left: 3rem;
+    padding-right: 3rem;
+    padding-top: 1.5rem;
+    padding-bottom: 2.5rem;
+  }
+
+  h1 {
+    font-size: 2.2rem;
+    margin-bottom: 1.2rem;
+  }
+
+  h2 {
+    font-size: 1.7rem;
+    margin-bottom: 1rem;
+  }
+
+  h3 {
+    font-size: 1.35rem;
+    margin-bottom: 0.8rem;
+  }
+
+  p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+  }
+
+  .hero-box {
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.2rem;
+    border-radius: 20px;
+  }
+
+  .hero-title {
+    font-size: 1.8rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.08rem;
+    line-height: 1.6;
+  }
+
+  /* Desktop-optimized grid layouts */
+  .env-header {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.8rem;
+    padding: 0.8rem 1rem;
+    border-radius: 16px;
+  }
+
+  .env-header-item {
+    gap: 0.12rem;
+  }
+
+  .env-header-item strong {
+    font-size: 0.78rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .env-header-item span {
+    font-size: 1rem;
+  }
+
+  /* Enhanced form styling for desktop */
+  div[data-testid="stForm"] {
+    padding: 1.4rem 1.6rem;
+    border-radius: 20px;
+    border-width: 2px;
+  }
+
+  /* Detail cards with better spacing */
+  .detail-card {
+    padding: 0.9rem 1rem 0.85rem 1rem;
+    margin-bottom: 0.8rem;
+    border-radius: 16px;
+    min-height: 4.2rem;
+  }
+
+  .detail-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .detail-value {
+    font-size: 1.02rem;
+  }
+
+  /* Input fields with enhanced sizing */
+  div[data-baseweb="input"] > div,
+  div[data-baseweb="select"] > div,
+  div[data-baseweb="textarea"] > div {
+    border-radius: 14px;
+    min-height: 2.8rem;
+  }
+
+  div[data-testid="stTextInput"] input,
+  div[data-testid="stNumberInput"] input,
+  div[data-testid="stTextArea"] textarea {
+    font-size: 1.05rem;
+    padding: 0.7rem 1rem;
+  }
+
+  /* Buttons with desktop sizing */
+  div[data-testid="stButton"] > button,
+  div[data-testid="stFormSubmitButton"] > button {
+    min-height: 2.8rem;
+    font-size: 1.05rem;
+    border-radius: 14px;
+    padding: 0.7rem 2.2rem;
+  }
+
+  /* Tab styling for desktop */
+  div[data-testid="stTabs"] button {
+    font-size: 1.05rem;
+    padding: 0.9rem 1.6rem !important;
+  }
+
+  /* Metrics and cards */
+  div[data-testid="stMetric"] {
+    border-radius: 16px;
+    padding: 0.5rem 1rem 0.8rem 1rem;
+  }
+
+  /* Expandable sections */
+  details[data-testid="stExpander"],
+  div[data-testid="stExpander"] {
+    border-radius: 16px;
+    border-width: 2px;
+  }
+
+  /* Data display improvements */
+  div[data-testid="stDataFrame"],
+  div[data-testid="stTable"] {
+    border-radius: 16px;
+    border-width: 2px;
+    overflow-x: auto;
+  }
+
+  /* Code blocks */
+  div[data-testid="stCodeBlock"] pre,
+  div[data-testid="stCode"] pre,
+  div[data-testid="stJson"] pre {
+    border-radius: 12px;
+    padding: 1.2rem;
+    font-size: 0.98rem;
+  }
+
+  /* Alert boxes */
+  div[data-testid="stAlert"] {
+    border-radius: 16px;
+    padding: 1rem 1.4rem;
+    border-width: 2px;
+  }
+
+  /* Env chips with better spacing */
+  .env-chip {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+    margin-right: 0.6rem;
+    margin-bottom: 0.8rem;
+    border-radius: 20px;
+  }
+}
+
+/* Wide Desktop View (1800px and above) - Maximum Width Usage */
+@media (min-width: 1800px) {
+  .main .block-container {
+    padding-left: 4rem;
+    padding-right: 4rem;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+  }
+
+  h1 {
+    font-size: 2.6rem;
+    margin-bottom: 1.6rem;
+  }
+
+  h2 {
+    font-size: 2rem;
+    margin-bottom: 1.4rem;
+  }
+
+  p {
+    font-size: 1.12rem;
+  }
+
+  .hero-box {
+    padding: 1.8rem 2rem;
+    margin-bottom: 1.6rem;
+  }
+
+  .hero-title {
+    font-size: 2.2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+
+  .env-header {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1rem 1.4rem;
+  }
+
+  .env-header-item strong {
+    font-size: 0.82rem;
+  }
+
+  .env-header-item span {
+    font-size: 1.1rem;
+  }
+
+  div[data-testid="stForm"] {
+    padding: 1.8rem 2rem;
+  }
+
+  .detail-card {
+    padding: 1.1rem 1.3rem 1rem 1.3rem;
+    margin-bottom: 1rem;
+    min-height: 4.5rem;
+  }
+
+  .detail-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .detail-value {
+    font-size: 1.1rem;
+  }
+
+  div[data-baseweb="input"] > div,
+  div[data-baseweb="select"] > div,
+  div[data-baseweb="textarea"] > div {
+    min-height: 3rem;
+  }
+
+  div[data-testid="stTextInput"] input,
+  div[data-testid="stNumberInput"] input,
+  div[data-testid="stTextArea"] textarea {
+    font-size: 1.1rem;
+    padding: 0.85rem 1.2rem;
+  }
+
+  div[data-testid="stButton"] > button,
+  div[data-testid="stFormSubmitButton"] > button {
+    min-height: 3rem;
+    font-size: 1.1rem;
+    padding: 0.85rem 2.6rem;
+  }
+
+  div[data-testid="stTabs"] button {
+    font-size: 1.1rem;
+    padding: 1rem 1.8rem !important;
+  }
+
+  div[data-testid="stMetric"] {
+    padding: 0.8rem 1.4rem 1.2rem 1.4rem;
+  }
+
+  div[data-testid="stAlert"] {
+    padding: 1.4rem 1.8rem;
+  }
+}
+
 section[data-testid="stSidebar"] {
   display: none !important;
 }
@@ -629,6 +900,85 @@ pre {
   border-radius: 10px !important;
 }
 
+/* Tablet View (900px - 1399px) - Optimized for tablets and small desktops */
+@media (min-width: 901px) and (max-width: 1399px) {
+  .main .block-container {
+    max-width: 100%;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-top: 1.2rem;
+  }
+
+  h1 {
+    font-size: 1.9rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  .hero-box {
+    padding: 1.2rem 1.4rem;
+    border-radius: 18px;
+  }
+
+  .hero-title {
+    font-size: 1.6rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.02rem;
+  }
+
+  .env-header {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  div[data-testid="stForm"] {
+    padding: 1.2rem 1.4rem;
+    border-radius: 18px;
+  }
+
+  .detail-card {
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 0.7rem;
+    border-radius: 15px;
+  }
+
+  div[data-baseweb="input"] > div,
+  div[data-baseweb="select"] > div,
+  div[data-baseweb="textarea"] > div {
+    border-radius: 13px;
+    min-height: 2.6rem;
+  }
+
+  div[data-testid="stButton"] > button,
+  div[data-testid="stFormSubmitButton"] > button {
+    min-height: 2.7rem;
+    border-radius: 13px;
+  }
+
+  div[data-testid="stTabs"] button {
+    font-size: 0.98rem;
+    padding: 0.8rem 1.4rem !important;
+  }
+
+  details[data-testid="stExpander"],
+  div[data-testid="stExpander"] {
+    border-radius: 15px;
+  }
+
+  div[data-testid="stMetric"] {
+    border-radius: 15px;
+  }
+
+  div[data-testid="stAlert"] {
+    border-radius: 15px;
+  }
+}
+
+/* Mobile View (max-width: 900px) - Compact for phones and small tablets */
 @media (max-width: 900px) {
   .main .block-container {
     padding-left: 0.78rem;
