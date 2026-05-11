@@ -597,7 +597,7 @@ protocol_tabs = st.tabs(["TRS398", "TG51"])
 
 with protocol_tabs[0]:
     protocol_mode = "TRS398"
-    with st.form("calculator_form_trs398", clear_on_submit=False):
+    with st.container():
         st.markdown("### TRS-398 Calculation Mode")
 
         admin_env_settings = get_environment_settings()
@@ -955,9 +955,11 @@ with protocol_tabs[0]:
 
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1:
-            submitted_trs398 = st.form_submit_button("Calculate Dose", type="primary", use_container_width=True)
+            submitted_trs398 = st.button(
+                "Calculate Dose", type="primary", use_container_width=True, key="trs_submit"
+            )
         with btn_col2:
-            cleared_trs398 = st.form_submit_button("Clear Form", use_container_width=True)
+            cleared_trs398 = st.button("Clear Form", use_container_width=True, key="trs_clear")
 
         if cleared_trs398:
             st.session_state.update(
@@ -1169,10 +1171,74 @@ with protocol_tabs[0]:
         except Exception as exc:
             st.error(f"Calculation failed: {exc}")
 
+# Ensure download buttons keep green theme even when Streamlit defaults differ.
+st.markdown(
+    """
+    <style>
+    div[data-testid="stDownloadButton"] button {
+        background: #7bb661 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+    }
+    div[data-testid="stDownloadButton"] button:hover {
+        filter: brightness(0.96) !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 with protocol_tabs[1]:
     protocol_mode = "TG51"
     with st.form("calculator_form_tg51", clear_on_submit=False):
         st.markdown("### TG-51 Calculation Mode")
+
+        admin_env_settings = get_environment_settings()
+        ktp_source_options = [
+            KTP_SOURCE_AUTO_AUTO,
+            KTP_SOURCE_AUTO_MANUAL,
+            KTP_SOURCE_MANUAL,
+        ]
+        ktp_source_default = admin_env_settings.get("ktp_source", KTP_SOURCE_AUTO_AUTO)
+        ktp_source_index = (
+            ktp_source_options.index(ktp_source_default)
+            if ktp_source_default in ktp_source_options
+            else 0
+        )
+
+        ktp_source = st.radio(
+            "Select KTP Source",
+            options=ktp_source_options,
+            index=ktp_source_index,
+            horizontal=True,
+            key="tg51_ktp_source",
+        )
+
+        manual_temperature_c = None
+        manual_pressure_kpa = None
+        if ktp_source == KTP_SOURCE_AUTO_MANUAL:
+            with st.expander("Manual Weather Inputs", expanded=True):
+                w1, w2 = st.columns(2)
+                with w1:
+                    manual_temperature_c = st.number_input(
+                        "Manual Temperature (C)",
+                        min_value=-50.0,
+                        value=22.0,
+                        step=0.1,
+                        format="%.1f",
+                        key="tg51_manual_temperature_c",
+                    )
+                with w2:
+                    manual_pressure_kpa = st.number_input(
+                        "Manual Pressure (kPa)",
+                        min_value=0.1,
+                        value=101.325,
+                        step=0.1,
+                        format="%.3f",
+                        key="tg51_manual_pressure_kpa",
+                    )
 
         c1, c2 = st.columns(2)
         with c1:
@@ -1461,19 +1527,33 @@ with protocol_tabs[1]:
     if submitted_tg51:
         try:
             chamber_defaults = get_chamber_defaults(chamber_type) or {}
-            if admin_env_source == ENV_SOURCE_AUTO:
-                if st.session_state.get("browser_geo_pending"):
-                    raise ValueError("Browser location weather is still pending.")
-                environmental_source, t_meas_c, p_meas_kpa, environment_details = _resolve_environment(env_settings)
-            else:
-                environmental_source = "Configured fallback"
-                t_meas_c = float(st.session_state.get("env_manual_temperature_c", DEFAULT_T0_C))
-                p_meas_kpa = float(st.session_state.get("env_manual_pressure_kpa", DEFAULT_P0_KPA))
+
+            if ktp_source == KTP_SOURCE_AUTO_MANUAL:
+                # Explicit manual environment for TG-51.
+                t_meas_c = float(manual_temperature_c)
+                p_meas_kpa = float(manual_pressure_kpa)
+                environmental_source = "Manual Weather"
                 environment_details = {
-                    "source": admin_env_source,
+                    "source": environmental_source,
                     "temperature_c": t_meas_c,
                     "pressure_kpa": p_meas_kpa,
+                    "provider": {"weather": "manual entry"},
                 }
+            else:
+                # Existing behavior: auto/configured/fallback environment.
+                if admin_env_source == ENV_SOURCE_AUTO:
+                    if st.session_state.get("browser_geo_pending"):
+                        raise ValueError("Browser location weather is still pending.")
+                    environmental_source, t_meas_c, p_meas_kpa, environment_details = _resolve_environment(env_settings)
+                else:
+                    environmental_source = "Configured fallback"
+                    t_meas_c = float(st.session_state.get("env_manual_temperature_c", DEFAULT_T0_C))
+                    p_meas_kpa = float(st.session_state.get("env_manual_pressure_kpa", DEFAULT_P0_KPA))
+                    environment_details = {
+                        "source": admin_env_source,
+                        "temperature_c": t_meas_c,
+                        "pressure_kpa": p_meas_kpa,
+                    }
 
             session_user = st.session_state.get("user") if st.session_state.get("authenticated") else None
             run_user_id = session_user["id"] if session_user else None
